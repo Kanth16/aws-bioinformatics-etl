@@ -4,7 +4,7 @@ on:
   create: # Trigger when a new branch is created
     branches:
       - "*"
-
+workflow_dispatch:
 jobs:
   create-s3-bucket:
     runs-on: ubuntu-latest
