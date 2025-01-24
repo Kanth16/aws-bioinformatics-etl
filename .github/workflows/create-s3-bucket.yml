@@ -18,20 +18,18 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v3
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.us-east-1 }}
+        aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }}
 
     # Step 3: Create an S3 bucket with the branch name
     - name: Create S3 bucket
       run: |
         # Generate a valid bucket name from the branch name
         BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9.-')
-        BUCKET_NAME="${BRANCH_NAME}-${{ secrets.bioinformatics }}"
-
+        BUCKET_NAME="${BRANCH_NAME}-myproject" # Adjust the suffix/prefix as needed
         echo "Creating bucket: $BUCKET_NAME"
-
-        aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ secrets.us-east-1 }} \
-          --create-bucket-configuration LocationConstraint=${{ secrets.us-east-1 }}
-
+        aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ vars.AWS_REGION }} \
+          --create-bucket-configuration LocationConstraint=${{ vars.AWS_REGION }}
         echo "Bucket successfully created: $BUCKET_NAME"
+
