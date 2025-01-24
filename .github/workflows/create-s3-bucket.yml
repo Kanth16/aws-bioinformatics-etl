@@ -27,7 +27,7 @@ jobs:
       run: |
         # Generate a valid bucket name from the branch name
         BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9.-')
-        BUCKET_NAME="${BRANCH_NAME}-${{ secrets.S3_BUCKET_NAME_PREFIX }}"
+        BUCKET_NAME="${BRANCH_NAME}-${{ secrets.bioinformatics }}"
 
         echo "Creating bucket: $BUCKET_NAME"
 
