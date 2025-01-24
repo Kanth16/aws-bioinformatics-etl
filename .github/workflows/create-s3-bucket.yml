@@ -20,7 +20,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+        aws-region: ${{ secrets.us-east-1 }}
 
     # Step 3: Create an S3 bucket with the branch name
     - name: Create S3 bucket
@@ -31,7 +31,7 @@ jobs:
 
         echo "Creating bucket: $BUCKET_NAME"
 
-        aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ secrets.AWS_REGION }} \
-          --create-bucket-configuration LocationConstraint=${{ secrets.AWS_REGION }}
+        aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ secrets.us-east-1 }} \
+          --create-bucket-configuration LocationConstraint=${{ secrets.us-east-1 }}
 
         echo "Bucket successfully created: $BUCKET_NAME"
