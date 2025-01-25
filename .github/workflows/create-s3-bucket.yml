@@ -1,16 +1,17 @@
-name: Create S3 Bucket on New Branch
+name: Deploy to S3
 
 on:
-  create: # Trigger when a new branch is created
+  push:
     branches:
+      - main
       - "*"
-  workflow_dispatch:
+
 jobs:
-  create-s3-bucket:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Checkout the repository
+    # Step 1: Checkout the code
     - name: Checkout code
       uses: actions/checkout@v3
 
@@ -22,14 +23,27 @@ jobs:
         aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ vars.AWS_REGION }}
 
-    # Step 3: Create an S3 bucket with the branch name
-    - name: Create S3 bucket
+    # Step 3: Deploy based on branch
+    - name: Deploy to S3
       run: |
-        # Generate a valid bucket name from the branch name
         BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9.-')
-        BUCKET_NAME="${BRANCH_NAME}-myproject" # Adjust the suffix/prefix as needed
-        echo "Creating bucket: $BUCKET_NAME"
-        aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ vars.AWS_REGION }} \
-          --create-bucket-configuration LocationConstraint=${{ vars.AWS_REGION }}
-        echo "Bucket successfully created: $BUCKET_NAME"
-
+        if [ "$BRANCH_NAME" = "main" ]; then
+          # Deploy to the main bucket
+          MAIN_BUCKET_NAME="main-bucket-${{ vars.S3_BUCKET_NAME_PREFIX }}"
+          echo "Deploying main branch code to bucket: $MAIN_BUCKET_NAME"
+          aws s3 sync . s3://$MAIN_BUCKET_NAME --delete
+        else
+          # Create a new bucket for the branch
+          BUCKET_NAME="${BRANCH_NAME}-${{ vars.S3_BUCKET_NAME_PREFIX }}"
+          echo "Creating bucket: $BUCKET_NAME and deploying branch code"
+          if [ "${{ vars.AWS_REGION }}" = "us-east-1" ]; then
+            # For us-east-1, do not include LocationConstraint
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ vars.AWS_REGION }}
+          else
+            # For other regions, include LocationConstraint
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ vars.AWS_REGION }} \
+              --create-bucket-configuration LocationConstraint=${{ vars.AWS_REGION }}
+          fi
+          # Sync code to the new bucket
+          aws s3 sync . s3://$BUCKET_NAME --delete
+        fi
