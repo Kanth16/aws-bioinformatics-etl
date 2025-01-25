@@ -1,6 +1,9 @@
 name: Deploy to S3
 
 on:
+  create: # Trigger when a new branch is created
+    branches:
+      - "*"
   push:
     branches:
       - main
