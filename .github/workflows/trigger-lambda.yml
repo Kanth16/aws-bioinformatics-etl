@@ -12,18 +12,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
       - uses: actions/checkout@v3
 
-      # Step 2: Install zip tool (if not preinstalled)
       - name: Install zip
         run: sudo apt-get install zip -y
 
-      # Step 3: Create ZIP file for Lambda function
       - name: Package Lambda Function
         run: zip -r code.zip Data_Extraction
 
-      # Step 4: Configure AWS credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -31,7 +27,6 @@ jobs:
           aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
           aws-region: "us-east-1"
 
-      # Step 5: Deploy to AWS Lambda
       - name: Deploy Lambda Function
         run: |
           aws lambda update-function-code \
