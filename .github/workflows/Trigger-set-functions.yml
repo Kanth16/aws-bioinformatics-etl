@@ -1,0 +1,30 @@
+name: Trigger AWS Step Functions
+
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  trigger-step-function:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout the code
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # Step 2: Configure AWS Credentials
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        aws-access-key-id:  ${{ vars.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }}
+
+    # Step 3: Trigger Step Function
+    - name: Start Step Function Execution
+      run: |
+        aws stepfunctions start-execution \
+          --state-machine-arn "arn:aws:states:us-east-1:180294214655:stateMachine:MyStateMachine-o02n93kz6" \
+          --input '{"key": "value"}'
