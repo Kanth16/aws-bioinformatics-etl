@@ -26,38 +26,27 @@ jobs:
         aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ vars.AWS_REGION }}
 
-    # Step 3: Deploy based on branch
+    # Step 3: Deploy to S3
     - name: Deploy to S3
       run: |
         BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9.-')
         if [ "$BRANCH_NAME" = "main" ]; then
-          # Deploy to the main bucket
           MAIN_BUCKET_NAME="main-bucket-myproject"
           echo "Deploying main branch code to bucket: $MAIN_BUCKET_NAME"
-
-          # Check if the bucket exists, if not, create it
           if aws s3api head-bucket --bucket "$MAIN_BUCKET_NAME" 2>/dev/null; then
             echo "Bucket $MAIN_BUCKET_NAME already exists"
           else
-            echo "Bucket $MAIN_BUCKET_NAME does not exist. Creating it."
             aws s3api create-bucket --bucket "$MAIN_BUCKET_NAME" --region us-east-1
           fi
-
-          # Sync files to the main bucket
           aws s3 sync . s3://$MAIN_BUCKET_NAME --delete
         else
-          # Create a new bucket for the branch
           BUCKET_NAME="${BRANCH_NAME}-myproject"
           echo "Creating bucket: $BUCKET_NAME and deploying branch code"
           if [ "us-east-1" = "us-east-1" ]; then
-            # For us-east-1, do not include LocationConstraint
             aws s3api create-bucket --bucket "$BUCKET_NAME" --region us-east-1
           else
-            # For other regions, include LocationConstraint
             aws s3api create-bucket --bucket "$BUCKET_NAME" --region us-east-1 \
               --create-bucket-configuration LocationConstraint=us-east-1
           fi
-
-          # Sync code to the new bucket
           aws s3 sync . s3://$BUCKET_NAME --delete
         fi
