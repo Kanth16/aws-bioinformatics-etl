@@ -5,5 +5,5 @@ def lambda_handler(event, context):
     print("Hello")
     return {
         'statusCode': 200,
-        'body': json.dumps('Hello from GITHUB Deployment Successful steps!')
+        'body': json.dumps('Hello ')
     }
