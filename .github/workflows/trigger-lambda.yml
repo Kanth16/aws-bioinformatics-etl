@@ -1,9 +1,9 @@
-name: Deploy Lambda Function
+name: Deploy_Lambda_Function
 
 on:
   workflow_run:
     workflows:
-      - Deploy to S3
+      - Deploy_to_S3
     types:
       - completed
 permissions:
