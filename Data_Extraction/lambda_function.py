@@ -5,5 +5,5 @@ def lambda_handler(event, context):
     print("Hello")
     return {
         'statusCode': 200,
-        'body': json.dumps('Hello World all ran successfully!')
+        'body': json.dumps('Hello World testing 123!')
     }

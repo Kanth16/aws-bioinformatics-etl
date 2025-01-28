@@ -63,7 +63,19 @@ jobs:
           aws s3 sync . s3://$BUCKET_NAME --delete
         fi
       
-      # Step 5: Deploy to AWS Lambda
+    # Deploy to AWS Lambda
+      # Step 1: Checkout the repository
+    - uses: actions/checkout@v3
+
+      # Step 2: Install zip tool (if not preinstalled)
+    - name: Install zip
+      run: sudo apt-get install zip -y
+
+      # Step 3: Create ZIP file for Lambda function
+    - name: Package Lambda Function
+      run: zip -r code.zip Data_Extraction
+
+      # Step 4: Deploy to AWS Lambda  
     - name: Deploy Lambda Function
       run: |
        echo "Deploy Lambda Function on branch: ${{ github.ref }}"
