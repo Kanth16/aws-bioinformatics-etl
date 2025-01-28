@@ -28,6 +28,8 @@ jobs:
     # Step 3: Deploy based on branch
     - name: Deploy to S3
       run: |
+       echo "Triggered on branch: ${{ github.ref }}"
+        echo "Deploy to S3"
         BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9.-')
         if [ "$BRANCH_NAME" = "main" ]; then
           # Deploy to the main bucket
@@ -60,3 +62,18 @@ jobs:
           # Sync code to the new bucket
           aws s3 sync . s3://$BUCKET_NAME --delete
         fi
+      
+      # Step 5: Deploy to AWS Lambda
+    - name: Deploy Lambda Function
+      run: |
+       echo "Deploy Lambda Function on branch: ${{ github.ref }}"
+        aws lambda update-function-code \
+          --function-name arn:aws:lambda:us-east-1:180294214655:function:DataExtraction \
+          --zip-file fileb://code.zip
+      
+      # Step 6:
+    - name: Start Step Function Execution
+      run: |
+        aws stepfunctions start-execution \
+          --state-machine-arn "arn:aws:states:us-east-1:180294214655:stateMachine:MyStateMachine-o02n93kz6" \
+          --input '{"key": "value"}'
