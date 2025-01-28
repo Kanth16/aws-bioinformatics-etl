@@ -1,9 +1,11 @@
 name: Deploy Lambda Function
 
 on:
-  push:
-    branches:
-      - "*"
+  workflow_run:
+    workflows:
+      - Deploy to S3
+    types:
+      - completed
 permissions:
   contents: read
   actions: write

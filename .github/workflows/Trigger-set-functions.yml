@@ -1,9 +1,12 @@
 name: Trigger AWS Step Functions
 
 on:
-  push:
-    branches:
-      - "*"
+    workflow_run:
+      workflows:
+        - Deploy Lambda Function
+      types:
+        - completed
+
 permissions:
   contents: read
   actions: write
