@@ -82,7 +82,12 @@ jobs:
         aws lambda update-function-code \
           --function-name arn:aws:lambda:us-east-1:180294214655:function:DataExtraction \
           --zip-file fileb://code.zip
-      
+    
+    - name: Wait for Lambda Update
+      run: |
+        echo "Waiting for Lambda deployment to propagate..."
+        sleep 10
+        
       # Step 6:
     - name: Start Step Function Execution
       run: |
