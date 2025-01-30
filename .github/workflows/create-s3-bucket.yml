@@ -87,10 +87,10 @@ jobs:
       run: |
         echo "Waiting for Lambda deployment to propagate..."
         sleep 10
-        
+
       # Step 6:
     - name: Start Step Function Execution
       run: |
         aws stepfunctions start-execution \
           --state-machine-arn "arn:aws:states:us-east-1:180294214655:stateMachine:MyStateMachine-o02n93kz6" \
-          --input '{"key": "value"}'
+          --input '{"Disease": "Alzheimer"}'
