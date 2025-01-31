@@ -1,26 +1,43 @@
 import json
 import requests
 from bs4 import BeautifulSoup
+import subprocess
 
+
+import os
+import json
+import requests
+import boto3
+
+# AWS S3 Client
+s3_client = boto3.client("s3")
 
 def lambda_handler(event, context):
-    # TODO implement
-    print("Hello")
-# Making a GET request
-    r = requests.get('https://thebiogrid.org/106848')
+    print(type(event))
+    API_URL = f"https://rest.uniprot.org/uniprotkb/search?query={event['Disease']}"
 
-    # Parsing the HTML
-    soup = BeautifulSoup(r.content, 'html.parser')
+    # Access the environment variable
+    bucket_name = os.environ.get("BUCKET_NAME", "dataextraction-myproject")
 
-    s = soup.find_all('a', class_='linkoutChip externalLinkout')
-    for link in s:
-        if "OMIM" in link.get_text():
-            print(link['title'])
-            return link['title']
 
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Hello World Lambda Deployed Successfully!')
-    }
-    
-lambda_handler(1,2)
+    print("Bucket Name:", bucket_name)  # Debugging
+
+    if not bucket_name:
+        return {"statusCode": 500, "body": "BUCKET_NAME environment variable is missing"}
+
+    response = requests.get(API_URL)
+
+    if response.status_code == 200:
+        json_data = response.json()
+
+        file_key = f"Raw Data/{event['Disease']}/Uniprot.json"
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=file_key,
+            Body=json.dumps(json_data, indent=4),
+            ContentType="application/json"
+        )
+
+        return {"statusCode": 200, "body": "File uploaded successfully"}
+
+    return {"statusCode": response.status_code, "body": "Failed to fetch API data"}

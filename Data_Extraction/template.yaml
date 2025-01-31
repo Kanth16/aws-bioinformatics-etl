@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  DataExtractionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: DataExtraction
+      Handler: lambda_function.lambda_handler  # Change to index.handler for Node.js
+      Runtime: python3.12  # Change to nodejs14.x if needed
+      Timeout: 30
+      MemorySize: 128
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /data
+            Method: get
