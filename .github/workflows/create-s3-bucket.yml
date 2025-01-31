@@ -45,6 +45,9 @@ jobs:
           --function-name DataExtraction \
           --zip-file fileb://code.zip
         
+        echo "Waiting for Lambda function update to complete..."
+        sleep 10
+        
         aws lambda update-function-configuration \
           --function-name DataExtraction \
           --environment "Variables={BUCKET_NAME=${{ github.ref_name }}-myproject}"
