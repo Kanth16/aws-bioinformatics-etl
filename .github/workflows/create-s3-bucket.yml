@@ -13,11 +13,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Checkout the code
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Step 2: Configure AWS credentials
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v3
       with:
@@ -25,72 +23,40 @@ jobs:
         aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ vars.AWS_REGION }}
 
-    # Step 3: Deploy based on branch
-    - name: Deploy to S3
+    - name: Set Up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"  # Ensure compatibility with AWS Lambda
+
+    - name: Install Dependencies
       run: |
-       echo "Triggered on branch: ${{ github.ref }}"
-        echo "Deploy to S3"
-        BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9.-')
-        if [ "$BRANCH_NAME" = "main" ]; then
-          # Deploy to the main bucket
-          MAIN_BUCKET_NAME="main-bucket-myproject"
-          echo "Deploying main branch code to bucket: $MAIN_BUCKET_NAME"
+        pip install --upgrade pip
+        pip install -r Data_Extraction/requirements.txt -t .  # Install directly
 
-          # Check if the bucket exists, if not, create it
-          if aws s3api head-bucket --bucket "$MAIN_BUCKET_NAME" 2>/dev/null; then
-            echo "Bucket $MAIN_BUCKET_NAME already exists"
-          else
-            echo "Bucket $MAIN_BUCKET_NAME does not exist. Creating it."
-            aws s3api create-bucket --bucket "$MAIN_BUCKET_NAME" --region us-east-1
-          fi
-
-          # Sync files to the main bucket
-          aws s3 sync . s3://$MAIN_BUCKET_NAME --delete
-        else
-          # Create a new bucket for the branch
-          BUCKET_NAME="${BRANCH_NAME}-myproject"
-          echo "Creating bucket: $BUCKET_NAME and deploying branch code"
-          if [ "us-east-1" = "us-east-1" ]; then
-            # For us-east-1, do not include LocationConstraint
-            aws s3api create-bucket --bucket "$BUCKET_NAME" --region us-east-1
-          else
-            # For other regions, include LocationConstraint
-            aws s3api create-bucket --bucket "$BUCKET_NAME" --region us-east-1 \
-              --create-bucket-configuration LocationConstraint=us-east-1
-          fi
-
-          # Sync code to the new bucket
-          aws s3 sync . s3://$BUCKET_NAME --delete
-        fi
-      
-    # Deploy to AWS Lambda
-      # Step 1: Checkout the repository
-    - uses: actions/checkout@v3
-
-      # Step 2: Install zip tool (if not preinstalled)
-    - name: Install zip
-      run: sudo apt-get install zip -y
-
-      # Step 3: Create ZIP file for Lambda function
     - name: Package Lambda Function
-      run: zip -r code.zip Data_Extraction
-
-      # Step 4: Deploy to AWS Lambda  
-    - name: Deploy Lambda Function
       run: |
-       echo "Deploy Lambda Function on branch: ${{ github.ref }}"
+        zip -r code.zip .  # Zip everything, including dependencies
+
+    - name: Deploy Lambda Function and Set Environment Variable
+      run: |
+        echo "Deploying Lambda Function on branch: ${{ github.ref_name }}"
+        
         aws lambda update-function-code \
-          --function-name arn:aws:lambda:us-east-1:180294214655:function:DataExtraction \
+          --function-name DataExtraction \
           --zip-file fileb://code.zip
+        
+        aws lambda update-function-configuration \
+          --function-name DataExtraction \
+          --environment "Variables={BUCKET_NAME=${{ github.ref_name }}-myproject}"
     
     - name: Wait for Lambda Update
       run: |
         echo "Waiting for Lambda deployment to propagate..."
         sleep 10
 
-      # Step 6:
     - name: Start Step Function Execution
       run: |
         aws stepfunctions start-execution \
           --state-machine-arn "arn:aws:states:us-east-1:180294214655:stateMachine:MyStateMachine-o02n93kz6" \
           --input '{"Disease": "Alzheimer"}'
+       
