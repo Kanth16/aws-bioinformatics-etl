@@ -91,7 +91,7 @@ jobs:
         
         aws lambda update-function-configuration \
           --function-name DataExtraction \
-          --environment "Variables={BUCKET_NAME=${BRANCH_NAME}-myproject}"
+          --environment "Variables={BUCKET_NAME="${BRANCH_NAME}-myproject"}"
       
     - name: Wait for Lambda Update
       run: |
