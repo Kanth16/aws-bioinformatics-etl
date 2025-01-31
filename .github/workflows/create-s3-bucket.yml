@@ -25,80 +25,77 @@ jobs:
         aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ vars.AWS_REGION }}
 
-    # Step 3: Deploy based on branch
+    # Step 3: Set branch name variable
+    - name: Set Branch Name
+      run: |
+        echo "BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9.-')" >> $GITHUB_ENV
+
+    # Step 4: Create and Deploy to S3 (Optimized)
     - name: Deploy to S3
       run: |
-       echo "Triggered on branch: ${{ github.ref }}"
-        echo "Deploy to S3"
-        BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9.-')
-        if [ "$BRANCH_NAME" = "main" ]; then
-          # Deploy to the main bucket
-          MAIN_BUCKET_NAME="main-bucket-myproject"
-          echo "Deploying main branch code to bucket: $MAIN_BUCKET_NAME"
-
-          # Check if the bucket exists, if not, create it
-          if aws s3api head-bucket --bucket "$MAIN_BUCKET_NAME" 2>/dev/null; then
-            echo "Bucket $MAIN_BUCKET_NAME already exists"
-          else
-            echo "Bucket $MAIN_BUCKET_NAME does not exist. Creating it."
-            aws s3api create-bucket --bucket "$MAIN_BUCKET_NAME" --region us-east-1
-          fi
-
-          # Sync files to the main bucket
-          aws s3 sync . s3://$MAIN_BUCKET_NAME --delete
+        echo "Triggered on branch: ${{ env.BRANCH_NAME }}"
+        if [ "${{ env.BRANCH_NAME }}" = "main" ]; then
+          BUCKET_NAME="main-bucket-myproject"
         else
-          # Create a new bucket for the branch
-          BUCKET_NAME="${BRANCH_NAME}-myproject"
-          echo "Creating bucket: $BUCKET_NAME and deploying branch code"
-          if [ "us-east-1" = "us-east-1" ]; then
-            # For us-east-1, do not include LocationConstraint
-            aws s3api create-bucket --bucket "$BUCKET_NAME" --region us-east-1
-          else
-            # For other regions, include LocationConstraint
-            aws s3api create-bucket --bucket "$BUCKET_NAME" --region us-east-1 \
-              --create-bucket-configuration LocationConstraint=us-east-1
-          fi
-
-          # Sync code to the new bucket
-          aws s3 sync . s3://$BUCKET_NAME --delete
+          BUCKET_NAME="${{ env.BRANCH_NAME }}-myproject"
         fi
-      
-    # Deploy to AWS Lambda
+
+        echo "Using bucket: $BUCKET_NAME"
+
+        # Check if bucket exists, create if not
+        if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+          echo "Bucket $BUCKET_NAME already exists."
+        else
+          echo "Creating bucket: $BUCKET_NAME"
+          aws s3api create-bucket --bucket "$BUCKET_NAME" --region us-east-1
+        fi
+
+        # Use s3 ls to check if new files exist before syncing
+        if aws s3 ls s3://$BUCKET_NAME/ > s3_existing_files.txt; then
+          echo "Checking for changes before syncing..."
+          if diff s3_existing_files.txt <(ls -1) > /dev/null; then
+            echo "No changes detected, skipping sync."
+          else
+            echo "Changes detected, uploading..."
+            zip -r deployment.zip .
+            aws s3 cp deployment.zip s3://$BUCKET_NAME/deployment.zip
+          fi
+        fi
+
+    # Step 5: Set Up Python for AWS Lambda
     - name: Set Up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"  # Ensure compatibility with AWS Lambda
+        python-version: "3.11"
 
     - name: Install Dependencies
       run: |
         pip install --upgrade pip
-        pip install -r Data_Extraction/requirements.txt -t .  # Install directly
+        pip install -r Data_Extraction/requirements.txt -t .
 
     - name: Package Lambda Function
       run: |
-        zip -r code.zip .  # Zip everything, including dependencies
+        zip -r lambda_code.zip .
 
-    - name: Deploy Lambda Function and Set Environment Variable
+    # Step 6: Deploy Lambda Function (Optimized)
+    - name: Deploy Lambda Function
       run: |
-        echo "Deploying Lambda Function on branch: ${{ github.ref_name }}"
-        BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9.-')
-        echo $BRANCH_NAME
+        echo "Deploying Lambda Function on branch: ${{ env.BRANCH_NAME }}"
+
         aws lambda update-function-code \
           --function-name DataExtraction \
-          --zip-file fileb://code.zip
-        
-        echo "Waiting for Lambda function update to complete..."
-        sleep 10
-        
+          --zip-file fileb://lambda_code.zip
+
+        echo "Waiting for Lambda function update..."
+        aws lambda wait function-updated --function-name DataExtraction
+
+    - name: Update Lambda Environment Variables
+      run: |
         aws lambda update-function-configuration \
           --function-name DataExtraction \
-          --environment "Variables={BUCKET_NAME="${BRANCH_NAME}-myproject"}"
-      
-    - name: Wait for Lambda Update
-      run: |
-        echo "Waiting for Lambda deployment to propagate..."
-        sleep 10
+          --environment "Variables={BUCKET_NAME=${{ env.BRANCH_NAME }}-myproject}"
 
+    # Step 7: Start Step Function Execution
     - name: Start Step Function Execution
       run: |
         aws stepfunctions start-execution \
