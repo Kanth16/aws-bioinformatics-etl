@@ -4,7 +4,7 @@
 codeuri = "D:\\Projects\\AWS Bio Informatics ETL\\aws-bioinformatics-etl\\Data_Extraction"
 runtime = "python3.12"
 architecture = "x86_64"
-handler = "lambda_function.lambda_handler"
+handler = "uniProt_API.lambda_handler"
 manifest_hash = ""
 packagetype = "Zip"
 functions = ["DataExtractionFunction"]

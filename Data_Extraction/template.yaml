@@ -4,7 +4,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: DataExtraction
-      Handler: lambda_function.lambda_handler  # Change to index.handler for Node.js
+      Handler: uniProt_API.lambda_handler  # Change to index.handler for Node.js
       Runtime: python3.12  # Change to nodejs14.x if needed
       Timeout: 30
       MemorySize: 128
