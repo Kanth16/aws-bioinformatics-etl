@@ -54,7 +54,7 @@ def lambda_handler(event, context):
         json_output = '\n'.join(json.dumps(record) for record in results_list)
 
         print(json_output)
-        file_key = f"Raw Data/Uniprot/{event['Disease']}.json"
+        file_key = f"Raw Data/Uniprot/{event['Disease']}/data.json"
         s3_client.put_object(
             Bucket=bucket_name,
             Key=file_key,
