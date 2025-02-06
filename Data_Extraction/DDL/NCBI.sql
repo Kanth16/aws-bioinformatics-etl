@@ -4,12 +4,13 @@ Drop table if exists NCBI;
 
 CREATE TABLE NCBI (
     Alleles VARCHAR(255),
-    Gene VARCHAR(255),
-    Chromosome VARCHAR(255),
-    Position BIGINT,
-    Load_Key BIGINT UNIQUE,
-    NCBI_Key BIGINT PRIMARY KEY,
-    Omim_Key BIGINT,
+    NCBI_ID VARCHAR(255),
+    SNP_Position BIGINT,
+    Gene_ID BIGINT,
+    Chromosome_Number VARCHAR(255),
+    Chromosome_Location VARCHAR(255),
+    Load_Key BIGINT,
+    NCBI_Key VARCHAR(255) PRIMARY KEY,
     SNPs Varchar(255),
-    FOREIGN KEY (SNPs) REFERENCES Omim(SNPs)
+    Disease_Name VARCHAR(255)
 );

@@ -4,9 +4,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: DataExtraction
-      Handler: Biogrid_Omim_Api.lambda_handler  # Change to index.handler for Node.js
+      Handler: NCBI_Api.lambda_handler  # Change to index.handler for Node.js
       Runtime: python3.12  # Change to nodejs14.x if needed
-      Timeout: 30
+      Timeout: 900
       MemorySize: 128
       Events:
         ApiEvent:

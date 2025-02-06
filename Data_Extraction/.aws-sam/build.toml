@@ -4,7 +4,7 @@
 codeuri = "D:\\Projects\\AWS Bio Informatics ETL\\aws-bioinformatics-etl\\Data_Extraction"
 runtime = "python3.12"
 architecture = "x86_64"
-handler = "Biogrid_Omim_Api.lambda_handler"
+handler = "NCBI_Api.lambda_handler"
 manifest_hash = ""
 packagetype = "Zip"
 functions = ["DataExtractionFunction"]

@@ -1,89 +1,83 @@
-# import json
-
-# def read_json_basic(file_path):
-#     with open(file_path, 'r') as file:
-#         data = json.load(file)
-#         final_json={}
-#         for i in range(len(data['results'])):
-#             flag=0
-#             print('primaryAccession:',data['results'][i]['primaryAccession'])
-#             print('uniProtkbId:',data['results'][i]['uniProtkbId'])
-#             print('scientificName:',data['results'][i]['organism']['scientificName'])
-#             print(data['results'][i]['genes'][0]['geneName']['value']) 
-#             print('recommendedName:',data['results'][i]['proteinDescription']['recommendedName']['fullName']['value'])
-#             if('alternativeNames' in data['results'][i]['proteinDescription']):
-#                 for j in range(len(data['results'][i]['proteinDescription']['alternativeNames'])):
-#                     print(data['results'][i]['proteinDescription']['alternativeNames'][j]['fullName']['value'],"  ",end="")
-#                 print()
-#             for k in range(len(data['results'][i]['uniProtKBCrossReferences'])):
-#                 if (data['results'][i]['uniProtKBCrossReferences'][k]['database'] == "BioGRID"):
-#                     print("BioGrid ID: ",data['results'][i]['uniProtKBCrossReferences'][k]['id'])
-#                     flag=1
-#                     break
-#     return data
-
-# read_json_basic(r'D:\Dump\Project files\Uniprot_Alzimer.json')
-# {106616: '602192', 106845: '107741', 106848: '104760', 107889: '116840', 107995: '126660', 
-#  108481: '601819', 109079: '600395', 109186: '606784', 109187: '605004', 110308: '157140', 
-#  110631: '516000', 110632: '516001', 111021: '602601', 111528: '600658', 111642: '104311', 
-#  111643: '600759', 112506: '163890', 112536: '602005', 114186: '603610', 115629: '605414', 
-#  115809: '605712', 116550: '611321', 117173: '615698', 124143: '610004'}
-
 import requests
-from bs4 import BeautifulSoup
 import json
+import xml.etree.ElementTree as ET
 
-def get_omim_link(url):
-    omim_link = {106616: '602192'}
-    # , 106845: '107741', 106848: '104760', 107889: '116840', 107995: '126660'}
-    # Making a GET request
-    response = requests.get(url)
+snp_id = "199476119" # "1554716504"  # Remove "rs" prefix for API call
+url = f"https://api.ncbi.nlm.nih.gov/variation/v0/refsnp/{snp_id}"
 
-    # Parsing the HTML content
-    soup = BeautifulSoup(response.content, 'html.parser')
+response = requests.get(url)
 
-    # Finding all link elements with the specified class
-    links = soup.find_all('a', class_='linkoutChip externalLinkout')
-    # Looping through links to find OMIM
-    for link in links:
-        if "OMIM" in link.get_text():
-            flag = False
-            print(link['title'].split()[1])
-            # return link['href']  # Extract and return the URL
-    # if flag == False:
-    #     return link['title'].split()[1]
-    headers = {
-    "ApiKey": "vaZVEn2USSu1nXPeS0JF9A",
-    "Content-Type": "application/json"
-    }
-    # print(response.json()['omim']['allelicVariantLists'][0]['allelicVariantList'][0])
-    omim_out=[]
-    for bid,omim in omim_link.items():
-        response = requests.get(f'https://api.omim.org/api/entry/allelicVariantList?mimNumber={omim}&format=json',headers=headers)
-        allelicVariant = response.json().get('omim', {}).get('allelicVariantLists', [{}])[0].get('allelicVariantList', [])
-        # print(allelicVariant[0]['allelicVariant'])
-        for i in allelicVariant:
-            temp={}
-            temp['Biogrid_id']=bid
-            temp['preferredTitle']=i['allelicVariant']['preferredTitle']
-            temp['mimNumber']=i['allelicVariant']['mimNumber']
-            if 'name' in i['allelicVariant']:
-                temp['Phenotype']=i['allelicVariant']['name']
-            if 'mutations' in i['allelicVariant']:
-                temp['mutations']=i['allelicVariant']['mutations']
-            # print(temp)
-            if 'dbSnps' in i['allelicVariant']:
-                temp['dbSnps']=i['allelicVariant']['dbSnps']
-            
-            omim_out.append(temp)
-    omim_out='\n'.join(json.dumps(record) for record in omim_out)
-    print(omim_out)
-    # print(json.dumps(omim_out, indent=4))
-    return "OMIM link not found"
+if response.status_code == 200:
+    snp_data = response.json()
+else:
+    print(f"Error: {response.status_code}")
+    exit()
 
-# URL of the BioGRID page
-biogrid_url = 'https://thebiogrid.org/106848'
+# Extract SNP ID
+snp_id = snp_data.get("refsnp_id", "N/A")
 
-# Fetching the OMIM link
-omim_link = get_omim_link(biogrid_url)
-print("OMIM Link:", omim_link)
+# Extract Chromosome and Position
+chromosome = "N/A"
+position = "N/A"
+alleles = []
+
+for placement in snp_data.get("primary_snapshot_data", {}).get("placements_with_allele", []):
+    if placement.get("is_ptlp", False):  # Primary assembly
+        chromosome = placement.get("seq_id", "N/A")  # Chromosome
+        for allele in placement.get("alleles", []):
+            spdi = allele.get("allele", {}).get("spdi", {})
+            ref = spdi.get("deleted_sequence", "N/A")  # Reference allele
+            alt = spdi.get("inserted_sequence", "N/A")  # Alternate allele
+            pos = spdi.get("position", "N/A")  # SNP Position
+            if pos != "N/A":
+                position = pos  # Update position
+            if ref != "N/A" and alt != "N/A" and ref != alt:
+                alleles.append(f"{ref}>{alt}")  # Format allele change (e.g., T>A)
+
+
+# gene_id = spdi['primary_snapshot_data']['allele_annotations'][0]['assembly_annotation'][0]['genes'][0]['id']
+allele_annotation = snp_data.get("primary_snapshot_data", {}).get("allele_annotations", [])[0]
+# Extract Gene Name
+gene = allele_annotation.get('assembly_annotation',[])[0]['genes'][0]['locus']
+gene_id = allele_annotation.get('assembly_annotation', [])[0]['genes'][0]['id']
+gene_data_url=f'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=gene&id={gene_id}&rettype=fasta'
+gene_response=requests.get(gene_data_url)
+root = ET.fromstring(gene_response.text)
+location = "N/A"
+for dl in root.findall(".//dl[@class='details']"):
+    for dt in dl.findall("dt"):
+        print(dt.text)
+        # Check if 'dt' contains 'Annotation' and then find the next 'dd'
+        if "Annotation" in (dt.text or ''):
+            # The next sibling is likely a 'dd', found by index in the parent 'dl'
+            dd_index = list(dl).index(dt) + 1
+            if dd_index < len(dl):
+                dd = list(dl)[dd_index]
+                if dd.tag == 'dd':
+                    chromosome_number = dd.text.split(',')[0].split()[1]
+                    if chromosome_number.isdigit():
+                        chromosome_number = int(chromosome_number)
+                    else:
+                        chromosome_number = "N/A"
+        if "Location" in (dt.text or ''):
+            dd_index = list(dl).index(dt) + 1
+            if dd_index < len(dl):
+                dd = list(dl)[dd_index]
+                if dd.tag == 'dd':
+                    location = dd.text
+print(type(gene_data_url))
+
+# Final Output
+snp_info = {
+    "SNP": f"rs{snp_id}",
+    "Chromosome": chromosome,
+    "Position": position,
+    "Alleles": alleles,  # List of allele variations
+    "Gene":gene,
+    "Gene_ID": gene_id,
+    "Chromosome Number": chromosome_number,
+    "Location": location
+}
+
+# Print Extracted Data
+print(json.dumps(snp_info, indent=4))

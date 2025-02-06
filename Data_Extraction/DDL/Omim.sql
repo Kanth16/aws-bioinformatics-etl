@@ -7,7 +7,7 @@ CREATE TABLE Omim (
     BioGrid_id Bigint,
     Phenotype VARCHAR(255),
     Mutation VARCHAR(255),
-    SNPs VARCHAR(255) ,
+    SNPs VARCHAR(255),
     Load_Key BIGINT,
     Omim_Key Varchar(255) PRIMARY KEY,
     preferred_title Varchar(255),
